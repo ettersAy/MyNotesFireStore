@@ -103,7 +103,7 @@ export default function App() {
     const t = (sel && sel.title) || '';
     const c = (sel && sel.content) || '';
     return draftTitle !== t || draftContent !== c;
-  }, [state.selectedId, draftTitle, draftContent]);
+  }, [draftTitle, draftContent]);
 
   const saveDraft = useCallback(async () => {
     const sel = notesRef.current.getSelected();
