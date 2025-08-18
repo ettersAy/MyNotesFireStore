@@ -7,11 +7,13 @@ import { getTheme } from './src/theme';
 import Editor from './src/components/Editor';
 import OptionsMenu from './src/components/OptionsMenu';
 import StatusText from './src/components/StatusText';
+import LoginModal from './src/components/LoginModal';
 
 import Clock from './src/services/Clock';
 import IdGenerator from './src/services/IdGenerator';
 import ClipboardService from './src/services/ClipboardService';
 import FirestoreRepository from './src/services/FirestoreRepository';
+import AuthService from './src/services/AuthService';
 import NotesService from './src/state/NotesService';
 import { getOrSetClientId } from './src/utils/clientId';
 
@@ -22,6 +24,7 @@ export default function App() {
   const clipRef = useRef(new ClipboardService());
   const storeRef = useRef(null); // Initialized asynchronously
   const notesRef = useRef(null); // Initialized asynchronously
+  const deviceIdRef = useRef(null);
 
   // App state
   const [isReady, setIsReady] = useState(false);
@@ -29,6 +32,7 @@ export default function App() {
   const [state, setState] = useState({ notes: [], selectedId: null, theme: 'dark' });
   const [status, setStatus] = useState({ type: null, msg: '' });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
 
@@ -58,6 +62,7 @@ export default function App() {
     (async () => {
       try {
         const id = await getOrSetClientId();
+        deviceIdRef.current = id;
         setClientId(id);
 
         // Init services
@@ -225,6 +230,28 @@ export default function App() {
     );
   }, [persist, refresh]);
 
+  const handleLogout = useCallback(async () => {
+    try {
+      setStatus({ type: null, msg: 'Logging out...' });
+      await AuthService.signOut();
+      const deviceId = await getOrSetClientId();
+      setClientId(deviceId);
+      storeRef.current = new FirestoreRepository(deviceId);
+      const data = await storeRef.current.load();
+      notesRef.current.hydrate(data);
+      const created = notesRef.current.ensureAtLeastOneNote();
+      setState(notesRef.current.getState());
+      if (created) {
+        const createdPayload = { ...notesRef.current.getState(), lastWriteBy: deviceId };
+        await storeRef.current.save(createdPayload);
+      }
+      setStatus({ type: 'saved', msg: 'Logged out' });
+    } catch (e) {
+      console.error('Logout failed:', e);
+      setStatus({ type: null, msg: 'Logout failed' });
+    }
+  }, []);
+
   // Sync drafts when the selected note changes
   useEffect(() => {
     if (!isReady) return;
@@ -323,9 +350,43 @@ export default function App() {
         }}
         onToggleTheme={toggleTheme}
         onCopyAll={copyAll}
+        onLoginRequested={() => setLoginOpen(true)}
+        onLogoutRequested={() => {
+          confirmUnsavedThen(() => {
+            handleLogout();
+          });
+        }}
+        isLoggedIn={clientId !== deviceIdRef.current}
         theme={theme}
         currentTheme={state.theme}
       />
+        <LoginModal
+          visible={loginOpen}
+          onClose={() => setLoginOpen(false)}
+          theme={theme}
+          onSuccess={async (user) => {
+            try {
+              setLoginOpen(false);
+              setStatus({ type: null, msg: 'Loading your notes...' });
+
+              // Switch repository to the authenticated user and reload
+              setClientId(user.uid);
+              storeRef.current = new FirestoreRepository(user.uid);
+              const data = await storeRef.current.load();
+              notesRef.current.hydrate(data);
+              const created = notesRef.current.ensureAtLeastOneNote();
+              setState(notesRef.current.getState());
+              if (created) {
+                const createdPayload = { ...notesRef.current.getState(), lastWriteBy: user.uid };
+                await storeRef.current.save(createdPayload);
+              }
+              setStatus({ type: 'saved', msg: 'Logged in' });
+            } catch (e) {
+              console.error('Post-login load failed:', e);
+              setStatus({ type: null, msg: 'Login succeeded, but loading failed' });
+            }
+          }}
+        />
       </SafeAreaView>
     </SafeAreaProvider>
   );
