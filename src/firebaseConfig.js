@@ -6,11 +6,11 @@
 // This file is git-ignored by default to protect your keys.
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyAmi2L83-FKZBlbYRn2ZNE6wtV2oPGkD7I",
-  authDomain: "mynotesgemini.firebaseapp.com",
-  projectId: "mynotesgemini",
-  storageBucket: "mynotesgemini.firebasestorage.app",
+  apiKey: "cccc",
+  authDomain: "ccc.firebaseapp.com",
+  projectId: "cccc",
+  storageBucket: "cccc.firebasestorage.app",
   messagingSenderId: "977395712775",
-  appId: "1:977395712775:web:ff280150fee737a7e23ba2",
-  measurementId: "G-M54SLPB8ZD"
+  appId: "1:ccc:web:cccc",
+  measurementId: "G-ccccc"
 };
