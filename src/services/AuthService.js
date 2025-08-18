@@ -17,17 +17,25 @@ export default class AuthService {
         return firebase.auth().currentUser;
     }
 
-    // Ensures there's an authenticated user; falls back to anonymous sign-in
-    static async ensureSignedIn() {
+    // Ensures there's an authenticated user; tries anonymous sign-in but falls back gracefully
+    static async ensureSignedIn({ timeoutMs = 3000 } = {}) {
         const current = firebase.auth().currentUser;
         if (current) return current;
 
-        try {
-            const credential = await firebase.auth().signInAnonymously();
-            return credential.user;
-        } catch (e) {
-            throw new Error(`Failed to sign in: ${e.message}`);
-        }
+        const attemptAnon = async () => {
+            try {
+                const credential = await firebase.auth().signInAnonymously();
+                return credential.user;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const timeout = new Promise(resolve => setTimeout(() => resolve(null), timeoutMs));
+
+        // Avoid blocking startup indefinitely if auth is unavailable
+        const user = await Promise.race([attemptAnon(), timeout]);
+        return user || null;
     }
 
     static async signInWithEmail(email, password) {

@@ -4,6 +4,7 @@ import 'firebase/firestore';
 import 'firebase/auth';
 import { firebaseConfig } from '../firebaseConfig.js';
 import AuthService from './AuthService.js';
+import StorageRepository from './StorageRepository.js';
 
 // Initialize Firebase (v8 namespaced API)
 if (!firebase.apps.length) {
@@ -13,9 +14,18 @@ if (!firebase.apps.length) {
 const db = firebase.firestore();
 export default class FirestoreRepository {
     // Convenience factory: ensures auth and builds a repository for the current user
+    // Falls back to local storage if auth is unavailable or fails
     static async createForCurrentUser() {
-        const user = await AuthService.ensureSignedIn();
-        return new FirestoreRepository(user.uid);
+        try {
+            const user = await AuthService.ensureSignedIn();
+            if (user && user.uid) {
+                return new FirestoreRepository(user.uid);
+            }
+        } catch (e) {
+            // ignore and fallback
+        }
+        // Use local AsyncStorage-based repository when not authenticated
+        return new StorageRepository();
     }
 
     constructor(clientId) {
