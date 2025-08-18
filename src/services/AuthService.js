@@ -51,6 +51,6 @@ export default class AuthService {
     static async getIdToken(forceRefresh = false) {
         const user = firebase.auth().currentUser;
         if (!user) return null;
-        return await user.getIdToken(forceRefresh);
+        return user.getIdToken(forceRefresh);
     }
 }
