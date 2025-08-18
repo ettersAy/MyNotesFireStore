@@ -1,7 +1,9 @@
 // Import the functions you need from the SDKs you need
 import firebase from 'firebase';
 import 'firebase/firestore';
+import 'firebase/auth';
 import { firebaseConfig } from '../firebaseConfig.js';
+import AuthService from './AuthService.js';
 
 // Initialize Firebase (v8 namespaced API)
 if (!firebase.apps.length) {
@@ -10,11 +12,19 @@ if (!firebase.apps.length) {
 
 const db = firebase.firestore();
 export default class FirestoreRepository {
+    // Convenience factory: ensures auth and builds a repository for the current user
+    static async createForCurrentUser() {
+        const user = await AuthService.ensureSignedIn();
+        return new FirestoreRepository(user.uid);
+    }
+
     constructor(clientId) {
-        if (!clientId) {
-            throw new Error('FirestoreRepository requires a clientId.');
+        const authedUid = firebase.auth().currentUser ? firebase.auth().currentUser.uid : null;
+        const effectiveClientId = clientId || authedUid;
+        if (!effectiveClientId) {
+            throw new Error('FirestoreRepository requires a clientId or an authenticated user. Call AuthService.ensureSignedIn() first or pass a clientId explicitly.');
         }
-        this.clientId = clientId;
+        this.clientId = effectiveClientId;
         this.userDocRef = db.collection('users').doc(this.clientId);
         this.notesColRef = this.userDocRef.collection('notes');
     }
