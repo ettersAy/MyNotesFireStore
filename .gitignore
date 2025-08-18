@@ -1,3 +1,4 @@
+src/firebaseConfig.js
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 .idea
 # dependencies
@@ -35,4 +36,3 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-src/firebaseConfig.js
