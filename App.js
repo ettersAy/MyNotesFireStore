@@ -7,6 +7,7 @@ import { getTheme } from './src/theme';
 import Editor from './src/components/Editor';
 import OptionsMenu from './src/components/OptionsMenu';
 import StatusText from './src/components/StatusText';
+import LoginModal from './src/components/LoginModal';
 
 import Clock from './src/services/Clock';
 import IdGenerator from './src/services/IdGenerator';
@@ -29,6 +30,7 @@ export default function App() {
   const [state, setState] = useState({ notes: [], selectedId: null, theme: 'dark' });
   const [status, setStatus] = useState({ type: null, msg: '' });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
 
@@ -323,9 +325,37 @@ export default function App() {
         }}
         onToggleTheme={toggleTheme}
         onCopyAll={copyAll}
+        onLoginRequested={() => setLoginOpen(true)}
         theme={theme}
         currentTheme={state.theme}
       />
+        <LoginModal
+          visible={loginOpen}
+          onClose={() => setLoginOpen(false)}
+          theme={theme}
+          onSuccess={async (user) => {
+            try {
+              setLoginOpen(false);
+              setStatus({ type: null, msg: 'Loading your notes...' });
+
+              // Switch repository to the authenticated user and reload
+              setClientId(user.uid);
+              storeRef.current = new FirestoreRepository(user.uid);
+              const data = await storeRef.current.load();
+              notesRef.current.hydrate(data);
+              const created = notesRef.current.ensureAtLeastOneNote();
+              setState(notesRef.current.getState());
+              if (created) {
+                const createdPayload = { ...notesRef.current.getState(), lastWriteBy: user.uid };
+                await storeRef.current.save(createdPayload);
+              }
+              setStatus({ type: 'saved', msg: 'Logged in' });
+            } catch (e) {
+              console.error('Post-login load failed:', e);
+              setStatus({ type: null, msg: 'Login succeeded, but loading failed' });
+            }
+          }}
+        />
       </SafeAreaView>
     </SafeAreaProvider>
   );

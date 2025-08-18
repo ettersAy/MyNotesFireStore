@@ -11,6 +11,7 @@ export default function OptionsMenu({
   onSelect,
   onToggleTheme,
   onCopyAll,
+  onLoginRequested,
   theme,
   currentTheme
 }) {
@@ -87,6 +88,15 @@ export default function OptionsMenu({
             }}
           >
             <Text style={[styles.actionText, { color: theme.colors.text }]}>📋 Copy all notes</Text>
+          </Pressable>
+          <Pressable
+            style={styles.actionItem}
+            onPress={() => {
+              onLoginRequested && onLoginRequested();
+              onRequestClose && onRequestClose();
+            }}
+          >
+            <Text style={[styles.actionText, { color: theme.colors.text }]}>🔐 Log in</Text>
           </Pressable>
         </View>
       </View>
