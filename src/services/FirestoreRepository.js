@@ -13,18 +13,14 @@ if (!firebase.apps.length) {
 
 const db = firebase.firestore();
 export default class FirestoreRepository {
-    // Convenience factory: ensures auth and builds a repository for the current user
-    // Falls back to local storage if auth is unavailable or fails
+    // Convenience factory: choose repository without blocking on auth
+    // - If a user is already present, use Firestore
+    // - Otherwise, immediately fall back to local AsyncStorage
     static async createForCurrentUser() {
-        try {
-            const user = await AuthService.ensureSignedIn();
-            if (user && user.uid) {
-                return new FirestoreRepository(user.uid);
-            }
-        } catch (e) {
-            // ignore and fallback
+        const current = firebase.auth().currentUser;
+        if (current && current.uid) {
+            return new FirestoreRepository(current.uid);
         }
-        // Use local AsyncStorage-based repository when not authenticated
         return new StorageRepository();
     }
 
