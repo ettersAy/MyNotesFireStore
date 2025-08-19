@@ -64,7 +64,8 @@ export default function App() {
 
         // Init services
         notesRef.current = new NotesService(clockRef.current, idRef.current);
-        storeRef.current = new FirestoreRepository(id);
+        // Choose storage without blocking on auth: Firestore if already authed, else local AsyncStorage
+        storeRef.current = await FirestoreRepository.createForCurrentUser();
 
         const data = await storeRef.current.load();
         notesRef.current.hydrate(data);
